@@ -16,7 +16,7 @@ const App: React.FC = () => {
   const [wordList, setWordList] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch('/word-list.txt')
+    fetch(`${process.env.PUBLIC_URL}/word-list.txt`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Failed to load word list');
@@ -31,6 +31,7 @@ const App: React.FC = () => {
         console.error('Error loading word list:', error);
       });
   }, []);
+  
 
   const handleSearch = () => {
     if (searchString === '') {
