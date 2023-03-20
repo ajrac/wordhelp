@@ -1,83 +1,120 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  TextField,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Box,
-  Typography,
-} from '@mui/material';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import { Trie } from './Trie';
+import { FixedSizeList as VirtualizedList } from 'react-window';
 
-const App: React.FC = () => {
+
+type RowProps = {
+  data: string[];
+  index: number;
+  style: React.CSSProperties;
+};
+
+const Row = ({ data, index, style }: RowProps) => (
+  <div style={style} key={index}>
+    {data[index]}
+  </div>
+);
+
+
+
+function App() {
   const [searchString, setSearchString] = useState('');
+  const [wordList, setWordList] = useState<Trie | null>(null);
   const [filteredWords, setFilteredWords] = useState<string[]>([]);
-  const [wordList, setWordList] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch(`${process.env.PUBLIC_URL}/word-list.txt`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Failed to load word list');
-        }
-        return response.text();
-      })
-      .then((text) => {
-        const words = text.split('\n').map((word) => word.trim());
-        setWordList(words);
-      })
-      .catch((error) => {
-        console.error('Error loading word list:', error);
-      });
+    const fetchData = async () => {
+      const response = await fetch(`${process.env.PUBLIC_URL}/word-list.txt`);
+      const text = await response.text();
+      const words = text.split('\n').filter((word) => word.length > 0);
+
+      const trie = new Trie();
+      for (const word of words) {
+        trie.insert(word);
+      }
+      setWordList(trie);
+    };
+    fetchData();
   }, []);
-  
 
   const handleSearch = () => {
     if (searchString === '') {
+      
       setFilteredWords([]);
     } else {
-      const searchResults = wordList.filter((word) =>
-        word.includes(searchString)
-      );
-      setFilteredWords(searchResults);
+      if (wordList) {
+        const searchResults = wordList.searchWordsContainingSubstring(searchString);
+        console.log('Search results:', searchResults);
+        setFilteredWords(searchResults);
+      }
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchString(event.target.value);
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
       handleSearch();
     }
   };
-
   return (
-    <Container maxWidth="sm">
-      <Box mt={4} mb={4} textAlign="center">
-        <Typography variant="h4">Word Search</Typography>
-      </Box>
-      <Box display="flex" alignItems="center" justifyContent="center" mb={4}>
-        <TextField
-          label="Search for a substring"
-          variant="outlined"
-          value={searchString}
-          onChange={(e) => setSearchString(e.target.value)}
-          onKeyPress={handleKeyPress}
-        />
-        <Box ml={2}>
-          <Button variant="contained" color="primary" onClick={handleSearch}>
-            Search
-          </Button>
-        </Box>
-      </Box>
-      <List>
-        {filteredWords.map((word, index) => (
-          <ListItem key={index}>
-            <ListItemText primary={word} />
-          </ListItem>
-        ))}
-      </List>
-    </Container>
+    <div
+      className="App"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: '20px',
+        boxSizing: 'border-box',
+      }}
+    >
+      <p
+      style={{
+        fontSize:'20px',
+        fontFamily: 'sans-serif',
+        font:'Arial'
+      }}
+      >Search for your Substring Below</p>
+      <TextField
+        id="outlined-basic"
+        label="Enter Substring"
+        variant="outlined"
+        onChange={handleInputChange}
+        onKeyPress={handleKeyPress}
+      />
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSearch}
+        style={{ margin: '10px' }}
+      >
+        Search
+      </Button>
+      <div style={{ height: 400, width: '100%', maxWidth: '1000px', justifyContent:'center', display:'flex' }}>
+        <VirtualizedList
+          height={400}
+          itemCount={filteredWords.length}
+          itemSize={50}
+          width={500} // Change the width to a number
+          itemData={filteredWords}
+        >
+          {Row}
+        </VirtualizedList>
+      </div>
+    </div>
   );
-};
+  
+  
+  
+  
+
+  
+}
 
 export default App;
